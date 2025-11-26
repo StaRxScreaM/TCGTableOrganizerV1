@@ -113,6 +113,7 @@ targetSdk = 34 / 36
 Gradle Kotlin DSL (AGP 8.1+)
 
 📂 Arquitectura del Proyecto
+
 TCGTableOrganizerV1/
 │── app/
 │   ├── src/
