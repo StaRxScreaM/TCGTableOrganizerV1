@@ -2,11 +2,15 @@ package com.cristobal.tcgtableorganizerv1.ui.main
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
@@ -26,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.cristobal.tcgtableorganizerv1.R
 import com.cristobal.tcgtableorganizerv1.model.EventUi
 import com.cristobal.tcgtableorganizerv1.ui.tables.TablesTab
@@ -33,6 +38,8 @@ import com.cristobal.tcgtableorganizerv1.ui.theme.Burgundy
 import com.cristobal.tcgtableorganizerv1.ui.theme.SecondaryGray
 import com.cristobal.tcgtableorganizerv1.ui.theme.SurfaceGray
 import com.cristobal.tcgtableorganizerv1.ui.theme.White
+
+
 
 /* ==========================================================
                         ENUM PESTAÑAS
@@ -47,6 +54,14 @@ enum class MainTab(val label: String) {
     TABLES("MESAS"),
     CHAT("CHAT"),
     PROFILE("PERFIL")
+}
+
+/**
+ * Sub-secciones de la Home: PROMOS / TIENDAS.
+ */
+enum class HomeSection {
+    PROMOS,
+    STORES
 }
 
 /* ==========================================================
@@ -141,7 +156,7 @@ fun MainScreen() {
             when (selectedTab) {
                 MainTab.HOME    -> HomeTab()
                 MainTab.EVENTS  -> EventsTab()
-                MainTab.TABLES  -> TablesTab()   // 👈 ahora solo llama al composable del módulo de mesas
+                MainTab.TABLES  -> TablesTab()
                 MainTab.CHAT    -> ChatTab()
                 MainTab.PROFILE -> ProfileTab()
             }
@@ -154,10 +169,15 @@ fun MainScreen() {
    ========================================================== */
 
 /**
- * Tab de inicio: evento destacado + filtros de tiendas.
+ * Tab de inicio:
+ * - Evento destacado
+ * - Píldoras PROMOS / TIENDAS
+ * - Carrusel de promos o lista de tiendas afiliadas
  */
 @Composable
 fun HomeTab() {
+    var selectedHomeSection by rememberSaveable { mutableStateOf(HomeSection.PROMOS) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -220,23 +240,41 @@ fun HomeTab() {
         ) {
             HomePillButton(
                 text = "PROMOS",
-                isActive = true,
+                isActive = selectedHomeSection == HomeSection.PROMOS,
+                onClick = { selectedHomeSection = HomeSection.PROMOS },
                 modifier = Modifier.weight(1f)
             )
             HomePillButton(
                 text = "TIENDAS",
-                isActive = false,
+                isActive = selectedHomeSection == HomeSection.STORES,
+                onClick = { selectedHomeSection = HomeSection.STORES },
                 modifier = Modifier.weight(1f)
             )
         }
 
         Spacer(Modifier.height(24.dp))
 
-        Text(
-            text = "ÚLTIMAS PROMOS O NOTICIAS WIZARD",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
-        )
+        when (selectedHomeSection) {
+            HomeSection.PROMOS -> {
+                Text(
+                    text = "PROMOS DESTACADAS",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(8.dp))
+                PromoCarousel()
+            }
+
+            HomeSection.STORES -> {
+                Text(
+                    text = "TIENDAS AFILIADAS",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(8.dp))
+                StoresList()
+            }
+        }
     }
 }
 
@@ -247,6 +285,7 @@ fun HomeTab() {
 fun HomePillButton(
     text: String,
     isActive: Boolean,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val bg = if (isActive) Burgundy else SurfaceGray
@@ -256,7 +295,8 @@ fun HomePillButton(
         modifier = modifier
             .height(60.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(bg),
+            .background(bg)
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -264,6 +304,262 @@ fun HomePillButton(
             color = txt,
             fontWeight = FontWeight.SemiBold
         )
+    }
+}
+
+/* ==========================================================
+                     CARRUSEL DE PROMOS
+   ========================================================== */
+
+@Composable
+fun PromoCarousel() {
+
+    // 🔻 Inserta aquí tus imágenes reales (promo_1, promo_2, etc.)
+    val promoImages = listOf(
+        R.drawable.promo_1,  // TODO: tienda 1
+        R.drawable.promo_2,  // TODO: tienda 2
+        R.drawable.promo_3,  // TODO: tienda 3
+        R.drawable.promo_4,  // TODO: tienda 4
+        R.drawable.promo_5   // TODO: tienda 5
+    )
+
+    if (promoImages.isEmpty()) {
+        Text("Sin promos disponibles por ahora", color = SecondaryGray)
+        return
+    }
+
+    var currentIndex by rememberSaveable { mutableStateOf(0) }
+    var showFullscreen by rememberSaveable { mutableStateOf(false) }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+
+        // ⭐ Imagen principal del carrusel
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .clickable { showFullscreen = true },
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
+        ) {
+            Image(
+                painter = painterResource(id = promoImages[currentIndex]),
+                contentDescription = "Promo ${currentIndex + 1}",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(16.dp))
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // ⭐ Controles e indicadores
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Botón Anterior
+            IconButton(
+                onClick = {
+                    currentIndex =
+                        if (currentIndex == 0) promoImages.lastIndex else currentIndex - 1
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Anterior",
+                    tint = Burgundy
+                )
+            }
+
+            // Indicadores
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                promoImages.indices.forEach { index ->
+                    val isSelected = index == currentIndex
+                    Box(
+                        modifier = Modifier
+                            .size(if (isSelected) 10.dp else 6.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(
+                                if (isSelected) Burgundy else SecondaryGray.copy(alpha = 0.5f)
+                            )
+                    )
+                }
+            }
+
+            // Botón Siguiente
+            IconButton(
+                onClick = {
+                    currentIndex =
+                        if (currentIndex == promoImages.lastIndex) 0 else currentIndex + 1
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "Siguiente",
+                    tint = Burgundy
+                )
+            }
+        }
+    }
+
+    // ⭐ Vista Fullscreen
+    if (showFullscreen) {
+        Dialog(onDismissRequest = { showFullscreen = false }) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xCC000000)),
+                contentAlignment = Alignment.Center
+            ) {
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                ) {
+
+                    // Botón cerrar arriba a la derecha
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.TopEnd
+                    ) {
+                        IconButton(onClick = { showFullscreen = false }) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = "Cerrar",
+                                tint = White
+                            )
+                        }
+                    }
+
+                    // Imagen ampliada
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(340.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Black)
+                    ) {
+                        Image(
+                            painter = painterResource(id = promoImages[currentIndex]),
+                            contentDescription = "Promo ${currentIndex + 1}",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Navegación en fullscreen
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        // Anterior
+                        TextButton(
+                            onClick = {
+                                currentIndex =
+                                    if (currentIndex == 0) promoImages.lastIndex else currentIndex - 1
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Anterior",
+                                tint = White
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text("Anterior", color = White)
+                        }
+
+                        // Siguiente
+                        TextButton(
+                            onClick = {
+                                currentIndex =
+                                    if (currentIndex == promoImages.lastIndex) 0 else currentIndex + 1
+                            }
+                        ) {
+                            Text("Siguiente", color = White)
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = "Siguiente",
+                                tint = White
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* ==========================================================
+                    LISTA DE TIENDAS AFILIADAS
+   ========================================================== */
+
+@Composable
+fun StoresList() {
+    // 🔻 Aquí puedes luego cargar tiendas reales desde backend
+    val stores = listOf(
+        "Área 52 - Temuco",
+        "Mana Base - Santiago",
+        "Crit Hit - Concepción",
+        "Dragon's Lair - Valdivia",
+        "Topdeck - Viña del Mar"
+    )
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        stores.forEach { store ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = White)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = store,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Afiliada a TCG Table Organizer",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SecondaryGray
+                        )
+                    }
+                    Text(
+                        text = "Ver",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Burgundy,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
     }
 }
 
