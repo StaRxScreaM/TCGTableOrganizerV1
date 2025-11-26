@@ -5,12 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
@@ -29,6 +27,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cristobal.tcgtableorganizerv1.R
+import com.cristobal.tcgtableorganizerv1.model.EventUi
+import com.cristobal.tcgtableorganizerv1.ui.tables.TablesTab
 import com.cristobal.tcgtableorganizerv1.ui.theme.Burgundy
 import com.cristobal.tcgtableorganizerv1.ui.theme.SecondaryGray
 import com.cristobal.tcgtableorganizerv1.ui.theme.SurfaceGray
@@ -139,10 +139,10 @@ fun MainScreen() {
                 .background(color = Color(0xFFF5F5F5))
         ) {
             when (selectedTab) {
-                MainTab.HOME -> HomeTab()
-                MainTab.EVENTS -> EventsTab()
-                MainTab.TABLES -> TablesTab()
-                MainTab.CHAT -> ChatTab()
+                MainTab.HOME    -> HomeTab()
+                MainTab.EVENTS  -> EventsTab()
+                MainTab.TABLES  -> TablesTab()   // 👈 ahora solo llama al composable del módulo de mesas
+                MainTab.CHAT    -> ChatTab()
                 MainTab.PROFILE -> ProfileTab()
             }
         }
@@ -272,17 +272,6 @@ fun HomePillButton(
    ========================================================== */
 
 /**
- * Modelo de evento a mostrar en la lista.
- */
-data class EventUi(
-    val dayShort: String,
-    val dayNumber: String,
-    val time: String,
-    val title: String,
-    val storeLabelTime: String
-)
-
-/**
  * Tab de eventos con lista estilo tarjeta.
  */
 @Composable
@@ -398,144 +387,11 @@ fun EventCard(event: EventUi) {
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.SportsEsports,
-                        contentDescription = null,
-                        tint = Burgundy,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text("TIENDA", color = SecondaryGray)
-                }
-                Spacer(Modifier.height(4.dp))
                 Text(
                     text = event.storeLabelTime,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
-            }
-        }
-    }
-}
-
-/* ==========================================================
-                          MESAS
-   ========================================================== */
-
-/**
- * Estado de una mesa (llena o vacía).
- */
-enum class TableStatus { EMPTY, FULL }
-
-/**
- * Modelo de mesa a mostrar.
- */
-data class TableUi(
-    val name: String,
-    val status: TableStatus
-)
-
-/**
- * Tab de mesas con “tarjetas” distribuidas en grid 2xN.
- */
-@Composable
-fun TablesTab() {
-
-    val tables = listOf(
-        TableUi("MESA 1", TableStatus.EMPTY),
-        TableUi("MESA 2", TableStatus.FULL),
-        TableUi("MESA 3", TableStatus.EMPTY),
-        TableUi("MESA 4", TableStatus.EMPTY),
-        TableUi("MESA 5", TableStatus.FULL),
-        TableUi("MESA 6", TableStatus.EMPTY)
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-
-        for (rowIndex in tables.indices step 2) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-
-                MesaCard(
-                    table = tables[rowIndex],
-                    modifier = Modifier.weight(1f)
-                )
-
-                if (rowIndex + 1 < tables.size) {
-                    MesaCard(
-                        table = tables[rowIndex + 1],
-                        modifier = Modifier.weight(1f)
-                    )
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-        }
-    }
-}
-
-/**
- * Tarjeta individual para una mesa.
- */
-@Composable
-fun MesaCard(table: TableUi, modifier: Modifier = Modifier) {
-
-    val (bgChip, txtChip) = when (table.status) {
-        TableStatus.EMPTY -> SurfaceGray to Color.DarkGray
-        TableStatus.FULL -> Burgundy to White
-    }
-
-    Card(
-        modifier = modifier.height(140.dp),
-        colors = CardDefaults.cardColors(containerColor = White),
-        shape = RoundedCornerShape(18.dp)
-    ) {
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-
-            Text(
-                text = table.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(bgChip)
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = table.status.name,
-                    color = txtChip,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                repeat(3) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF3A3A3A))
-                    )
-                }
             }
         }
     }
