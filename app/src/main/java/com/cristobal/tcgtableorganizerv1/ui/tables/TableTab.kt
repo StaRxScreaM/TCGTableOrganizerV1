@@ -3,8 +3,10 @@ package com.cristobal.tcgtableorganizerv1.ui.tables
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -16,8 +18,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +82,9 @@ fun TablesTab() {
 
     val startIndex = pageIndex * pageSize
     val pageTables = tables.drop(startIndex).take(pageSize)
+
+    // Scroll para la zona de mesas
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
@@ -142,42 +152,50 @@ fun TablesTab() {
 
         Spacer(Modifier.height(16.dp))
 
-        // Grid 2 columnas con las mesas de la página actual
-        if (pageTables.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No hay mesas creadas", color = SecondaryGray)
-            }
-        } else {
-            for (rowIndex in pageTables.indices step 2) {
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+        // 🟢 Zona SCROLLEABLE de las mesas
+        Column(
+            modifier = Modifier
+                .weight(1f)                // ocupa el espacio disponible
+                .verticalScroll(scrollState) // permite scroll vertical
+        ) {
+            if (pageTables.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 32.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-
-                    val first = pageTables[rowIndex]
-                    MesaCard(
-                        table = first,
-                        modifier = Modifier.weight(1f),
-                        onClick = { selectedTable = first }
-                    )
-
-                    if (rowIndex + 1 < pageTables.size) {
-                        val second = pageTables[rowIndex + 1]
-                        MesaCard(
-                            table = second,
-                            modifier = Modifier.weight(1f),
-                            onClick = { selectedTable = second }
-                        )
-                    } else {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+                    Text("No hay mesas creadas", color = SecondaryGray)
                 }
+            } else {
+                for (rowIndex in pageTables.indices step 2) {
 
-                Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+
+                        val first = pageTables[rowIndex]
+                        MesaCard(
+                            table = first,
+                            modifier = Modifier.weight(1f),
+                            onClick = { selectedTable = first }
+                        )
+
+                        if (rowIndex + 1 < pageTables.size) {
+                            val second = pageTables[rowIndex + 1]
+                            MesaCard(
+                                table = second,
+                                modifier = Modifier.weight(1f),
+                                onClick = { selectedTable = second }
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+                }
             }
         }
 
@@ -250,10 +268,10 @@ fun MesaCard(
 ) {
 
     val (bgChip, txtChip) = when (table.status) {
-        TableStatus.EMPTY -> SurfaceGray to Color.DarkGray
+        TableStatus.EMPTY     -> SurfaceGray to Color.DarkGray
         TableStatus.SEARCHING -> Color(0xFF1976D2) to White
-        TableStatus.WAITING -> Color(0xFFFFA000) to Color.Black
-        TableStatus.FULL -> Burgundy to White
+        TableStatus.WAITING   -> Color(0xFFFFA000) to Color.Black
+        TableStatus.FULL      -> Burgundy to White
     }
 
     Card(
@@ -323,9 +341,9 @@ fun MesaCard(
 
 /**
  * Diálogo para editar una mesa:
- * - nombre del juego
+ * - juego
  * - número de jugadores (2–4)
- * - estado
+ * - estado (cualquier estado)
  * - reserva
  */
 @Composable
@@ -381,20 +399,48 @@ fun TableDetailDialog(
                     }
                 }
 
-                // Estado: EMPTY / SEARCHING / WAITING / FULL
+                // Estado: EMPTY / SEARCHING / WAITING / FULL en grilla 2x2
                 Column {
                     Text(
                         text = "Estado de la mesa",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(8.dp))
+
+                    val allStatuses = TableStatus.values()
+
+                    // Fila 1: primeros dos estados
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        TableStatus.values().forEach { s ->
+                        allStatuses.take(2).forEach { s ->
                             val isSelected = s == status
                             Button(
                                 onClick = { status = s },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSelected) Burgundy else SurfaceGray,
+                                    contentColor = if (isSelected) White else Color(0xFF333333)
+                                )
+                            ) {
+                                Text(s.name)
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Fila 2: siguientes dos estados
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        allStatuses.drop(2).forEach { s ->
+                            val isSelected = s == status
+                            Button(
+                                onClick = { status = s },
+                                modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (isSelected) Burgundy else SurfaceGray,
                                     contentColor = if (isSelected) White else Color(0xFF333333)
@@ -407,7 +453,7 @@ fun TableDetailDialog(
 
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "WAITING se utiliza para mesas que esperan jugadores (máx. 15 minutos según la regla de la tienda).",
+                        text = "WAITING se usa para mesas que esperan jugadores (máx. 15 minutos según las reglas de la tienda).",
                         style = MaterialTheme.typography.bodySmall,
                         color = SecondaryGray
                     )
@@ -454,3 +500,4 @@ fun TableDetailDialog(
         }
     )
 }
+
