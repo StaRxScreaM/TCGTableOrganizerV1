@@ -1,6 +1,10 @@
 package com.cristobal.tcgtableorganizerv1.ui.main
 
 import androidx.compose.foundation.Image
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,20 +37,22 @@ import androidx.compose.ui.window.Dialog
 import com.cristobal.tcgtableorganizerv1.R
 import com.cristobal.tcgtableorganizerv1.model.EventUi
 import com.cristobal.tcgtableorganizerv1.ui.tables.TablesTab
-import com.cristobal.tcgtableorganizerv1.ui.theme.Burgundy
-import com.cristobal.tcgtableorganizerv1.ui.theme.SecondaryGray
-import com.cristobal.tcgtableorganizerv1.ui.theme.SurfaceGray
-import com.cristobal.tcgtableorganizerv1.ui.theme.White
+import com.cristobal.tcgtableorganizerv1.ui.theme.*
 
+/* ==========================================================
+                      MODELO DE TIENDA
+   ========================================================== */
 
+data class StoreUi(
+    val name: String,
+    val location: String,
+    val mapUrl: String
+)
 
 /* ==========================================================
                         ENUM PESTAÑAS
    ========================================================== */
 
-/**
- * Pestañas principales de la aplicación.
- */
 enum class MainTab(val label: String) {
     HOME("INICIO"),
     EVENTS("EVENTOS"),
@@ -56,9 +61,6 @@ enum class MainTab(val label: String) {
     PROFILE("PERFIL")
 }
 
-/**
- * Sub-secciones de la Home: PROMOS / TIENDAS.
- */
 enum class HomeSection {
     PROMOS,
     STORES
@@ -68,13 +70,14 @@ enum class HomeSection {
                      MAIN + BOTTOM BAR
    ========================================================== */
 
-/**
- * Pantalla principal con top bar y bottom navigation.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    onOpenStore: (storeName: String, location: String, mapUrl: String) -> Unit
+) {
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.HOME) }
+
+    val colors = MaterialTheme.colorScheme
 
     Scaffold(
         topBar = {
@@ -83,7 +86,7 @@ fun MainScreen() {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
                             painter = painterResource(id = R.drawable.logo_tcg),
-                            contentDescription = "Logo TCG Table Organizer",
+                            contentDescription = "Logo",
                             modifier = Modifier
                                 .height(32.dp)
                                 .padding(end = 8.dp)
@@ -94,7 +97,7 @@ fun MainScreen() {
                     Icon(
                         imageVector = Icons.Outlined.Person,
                         contentDescription = "Perfil",
-                        tint = White,
+                        tint = colors.onPrimary,
                         modifier = Modifier.padding(start = 16.dp)
                     )
                 },
@@ -102,45 +105,45 @@ fun MainScreen() {
                     Icon(
                         imageVector = Icons.Filled.Settings,
                         contentDescription = "Ajustes",
-                        tint = White,
+                        tint = colors.onPrimary,
                         modifier = Modifier.padding(end = 16.dp)
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Burgundy
+                    containerColor = colors.primary
                 )
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = Color(0xFF181818)) {
+            NavigationBar(containerColor = colors.surface) {
                 NavigationBarItem(
                     selected = selectedTab == MainTab.HOME,
                     onClick = { selectedTab = MainTab.HOME },
-                    icon = { Icon(Icons.Outlined.Home, contentDescription = "Inicio") },
+                    icon = { Icon(Icons.Outlined.Home, null) },
                     label = { Text(MainTab.HOME.label) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == MainTab.EVENTS,
                     onClick = { selectedTab = MainTab.EVENTS },
-                    icon = { Icon(Icons.Filled.Event, contentDescription = "Eventos") },
+                    icon = { Icon(Icons.Filled.Event, null) },
                     label = { Text(MainTab.EVENTS.label) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == MainTab.TABLES,
                     onClick = { selectedTab = MainTab.TABLES },
-                    icon = { Icon(Icons.Outlined.TableChart, contentDescription = "Mesas") },
+                    icon = { Icon(Icons.Outlined.TableChart, null) },
                     label = { Text(MainTab.TABLES.label) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == MainTab.CHAT,
                     onClick = { selectedTab = MainTab.CHAT },
-                    icon = { Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Chat") },
+                    icon = { Icon(Icons.Outlined.ChatBubbleOutline, null) },
                     label = { Text(MainTab.CHAT.label) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == MainTab.PROFILE,
                     onClick = { selectedTab = MainTab.PROFILE },
-                    icon = { Icon(Icons.Outlined.Person, contentDescription = "Perfil") },
+                    icon = { Icon(Icons.Outlined.Person, null) },
                     label = { Text(MainTab.PROFILE.label) }
                 )
             }
@@ -151,10 +154,10 @@ fun MainScreen() {
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(color = Color(0xFFF5F5F5))
+                .background(colors.background)
         ) {
             when (selectedTab) {
-                MainTab.HOME    -> HomeTab()
+                MainTab.HOME    -> HomeTab(onOpenStore = onOpenStore)
                 MainTab.EVENTS  -> EventsTab()
                 MainTab.TABLES  -> TablesTab()
                 MainTab.CHAT    -> ChatTab()
@@ -168,15 +171,14 @@ fun MainScreen() {
                            HOME
    ========================================================== */
 
-/**
- * Tab de inicio:
- * - Evento destacado
- * - Píldoras PROMOS / TIENDAS
- * - Carrusel de promos o lista de tiendas afiliadas
- */
 @Composable
-fun HomeTab() {
+fun HomeTab(
+    onOpenStore: (storeName: String, location: String, mapUrl: String) -> Unit
+) {
+
+    val colors = MaterialTheme.colorScheme
     var selectedHomeSection by rememberSaveable { mutableStateOf(HomeSection.PROMOS) }
+    var showEventDetail by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -187,37 +189,42 @@ fun HomeTab() {
         Text(
             text = "EVENTO DESTACADO DE LA SEMANA",
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = colors.onBackground
         )
 
         Spacer(Modifier.height(8.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp)
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.surfaceVariant)
         ) {
             Column(
                 modifier = Modifier
-                    .background(Color(0xFF3B2424))
+                    .background(BurgundyDark)
                     .padding(16.dp)
             ) {
                 Text(
                     text = "COMMANDER NIGHT",
                     style = MaterialTheme.typography.titleLarge,
-                    color = White,
+                    color = colors.onPrimary,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "ENE 15 - ÁREA 52",
+                    text = "DIC 05 - ÁREA 52",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = White
+                    color = colors.onPrimary
                 )
 
                 Spacer(Modifier.height(16.dp))
 
                 Button(
-                    onClick = { /* Acción ver más */ },
-                    colors = ButtonDefaults.buttonColors(containerColor = Burgundy)
+                    onClick = { showEventDetail = true },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Burgundy,
+                        contentColor = White
+                    )
                 ) {
                     Text("VER MÁS")
                 }
@@ -229,7 +236,8 @@ fun HomeTab() {
         Text(
             text = "TIENDAS DESTACADAS",
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = colors.onBackground
         )
 
         Spacer(Modifier.height(8.dp))
@@ -259,7 +267,8 @@ fun HomeTab() {
                 Text(
                     text = "PROMOS DESTACADAS",
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onBackground
                 )
                 Spacer(Modifier.height(8.dp))
                 PromoCarousel()
@@ -269,18 +278,98 @@ fun HomeTab() {
                 Text(
                     text = "TIENDAS AFILIADAS",
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onBackground
                 )
                 Spacer(Modifier.height(8.dp))
-                StoresList()
+                StoresList(onOpenStore = onOpenStore)
             }
+        }
+
+        if (showEventDetail) {
+            EventDetailDialog(
+                onDismiss = { showEventDetail = false }
+            )
         }
     }
 }
 
-/**
- * Botón tipo “píldora” para filtros de la Home.
- */
+/* ==========================================================
+                 DIALOGO DETALLE DE EVENTO
+   ========================================================== */
+
+@Composable
+fun EventDetailDialog(
+    onDismiss: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cerrar")
+            }
+        },
+        title = {
+            Text(
+                text = "Commander Night – ÁREA 52",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+
+                // 🖼 Banner del evento (weekly_event.png en drawable)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = colors.surfaceVariant
+                    )
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.weekly_event),
+                        contentDescription = "Banner Commander Night",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                Text(
+                    text = "DIC 05 - ÁREA 52",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.onSurface
+                )
+
+                Text(
+                    text = "Todos los viernes, desde las 19:00 hasta las 03:00, la base de Área 52 abre sus compuertas para el Commander Night. " +
+                            "Trae tu mazo y únete a otras personas fanáticas del Magic para una noche completa de Commander.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.onSurface
+                )
+
+                Text(
+                    text = "Por solo $2.000 por persona puedes entrar a mesas con premio para el ganador y sorteos sorpresa durante la noche. " +
+                            "Además, nuestra cafetería temática tiene burgers, pizzas, snacks y néctares galácticos para mantener tu maná cargado hasta la madrugada.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.onSurface
+                )
+            }
+        }
+    )
+}
+
+/* ==========================================================
+                       BOTÓN PÍLDORA
+   ========================================================== */
+
 @Composable
 fun HomePillButton(
     text: String,
@@ -289,7 +378,7 @@ fun HomePillButton(
     modifier: Modifier = Modifier
 ) {
     val bg = if (isActive) Burgundy else SurfaceGray
-    val txt = if (isActive) White else Color(0xFF333333)
+    val txt = if (isActive) White else TextPrimaryLight
 
     Box(
         modifier = modifier
@@ -314,55 +403,58 @@ fun HomePillButton(
 @Composable
 fun PromoCarousel() {
 
-    // 🔻 Inserta aquí tus imágenes reales (promo_1, promo_2, etc.)
+    val colors = MaterialTheme.colorScheme
+
     val promoImages = listOf(
-        R.drawable.promo_1,  // TODO: tienda 1
-        R.drawable.promo_2,  // TODO: tienda 2
-        R.drawable.promo_3,  // TODO: tienda 3
-        R.drawable.promo_4,  // TODO: tienda 4
-        R.drawable.promo_5   // TODO: tienda 5
+        R.drawable.promo_1,
+        R.drawable.promo_2,
+        R.drawable.promo_3,
+        R.drawable.promo_4,
+        R.drawable.promo_5
     )
 
     if (promoImages.isEmpty()) {
-        Text("Sin promos disponibles por ahora", color = SecondaryGray)
+        Text("Sin promos disponibles por ahora", color = colors.onSurfaceVariant)
         return
     }
 
     var currentIndex by rememberSaveable { mutableStateOf(0) }
     var showFullscreen by rememberSaveable { mutableStateOf(false) }
 
+    LaunchedEffect(promoImages) {
+        while (promoImages.isNotEmpty()) {
+            delay(4000L)
+            currentIndex = (currentIndex + 1) % promoImages.size
+        }
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth()
     ) {
 
-        // ⭐ Imagen principal del carrusel
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(220.dp)
                 .clickable { showFullscreen = true },
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.DarkGray)
+            colors = CardDefaults.cardColors(containerColor = Color.Black)
         ) {
             Image(
                 painter = painterResource(id = promoImages[currentIndex]),
                 contentDescription = "Promo ${currentIndex + 1}",
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
         }
 
         Spacer(Modifier.height(12.dp))
 
-        // ⭐ Controles e indicadores
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Botón Anterior
             IconButton(
                 onClick = {
                     currentIndex =
@@ -376,7 +468,6 @@ fun PromoCarousel() {
                 )
             }
 
-            // Indicadores
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -388,13 +479,15 @@ fun PromoCarousel() {
                             .size(if (isSelected) 10.dp else 6.dp)
                             .clip(RoundedCornerShape(999.dp))
                             .background(
-                                if (isSelected) Burgundy else SecondaryGray.copy(alpha = 0.5f)
+                                if (isSelected)
+                                    Burgundy
+                                else
+                                    colors.onSurfaceVariant.copy(alpha = 0.5f)
                             )
                     )
                 }
             }
 
-            // Botón Siguiente
             IconButton(
                 onClick = {
                     currentIndex =
@@ -410,7 +503,7 @@ fun PromoCarousel() {
         }
     }
 
-    // ⭐ Vista Fullscreen
+    /* FULLSCREEN */
     if (showFullscreen) {
         Dialog(onDismissRequest = { showFullscreen = false }) {
             Box(
@@ -426,8 +519,6 @@ fun PromoCarousel() {
                         .fillMaxWidth()
                         .padding(24.dp)
                 ) {
-
-                    // Botón cerrar arriba a la derecha
                     Box(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.TopEnd
@@ -441,34 +532,29 @@ fun PromoCarousel() {
                         }
                     }
 
-                    // Imagen ampliada
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(340.dp),
+                            .aspectRatio(16f / 9f),
                         shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.Black)
                     ) {
                         Image(
                             painter = painterResource(id = promoImages[currentIndex]),
                             contentDescription = "Promo ${currentIndex + 1}",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(8.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
                     }
 
                     Spacer(Modifier.height(16.dp))
 
-                    // Navegación en fullscreen
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
 
-                        // Anterior
                         TextButton(
                             onClick = {
                                 currentIndex =
@@ -484,7 +570,6 @@ fun PromoCarousel() {
                             Text("Anterior", color = White)
                         }
 
-                        // Siguiente
                         TextButton(
                             onClick = {
                                 currentIndex =
@@ -507,18 +592,42 @@ fun PromoCarousel() {
 }
 
 /* ==========================================================
-                    LISTA DE TIENDAS AFILIADAS
+                  LISTA DE TIENDAS AFILIADAS
    ========================================================== */
 
 @Composable
-fun StoresList() {
-    // 🔻 Aquí puedes luego cargar tiendas reales desde backend
+fun StoresList(
+    onOpenStore: (storeName: String, location: String, mapUrl: String) -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+
+    // 🔥 TIENDAS TCG EN SANTIAGO
     val stores = listOf(
-        "Área 52 - Temuco",
-        "Mana Base - Santiago",
-        "Crit Hit - Concepción",
-        "Dragon's Lair - Valdivia",
-        "Topdeck - Viña del Mar"
+        StoreUi(
+            name = "Área 52 - Santiago",
+            location = "Av. Sta. Isabel 962, 7501307 Providencia, Región Metropolitana",
+            mapUrl = "https://maps.app.goo.gl/u6aR93WcGybEaZt79"
+        ),
+        StoreUi(
+            name = "Top Deck - Providencia",
+            location = "José Manuel Infante 1251, Providencia, Región Metropolitana",
+            mapUrl = "https://maps.app.goo.gl/p8JBds8CWd9XKdZ9A"
+        ),
+        StoreUi(
+            name = "Magicsur Chile",
+            location = "Seminario 507, Providencia, Región Metropolitana",
+            mapUrl = "https://maps.app.goo.gl/ZHLn45jE6YzEDWWH7"
+        ),
+        StoreUi(
+            name = "Entre Juegos - Providencia",
+            location = "Nueva de Lyon 61, Providencia, Región Metropolitana",
+            mapUrl = "https://maps.app.goo.gl/kNf9DJFQ4TXMgLYP9"
+        ),
+        StoreUi(
+            name = "Magic4ever",
+            location = "Moneda 840, Santiago, Región Metropolitana",
+            mapUrl = "https://maps.app.goo.gl/4SQqpFEAGxQwqA1fA"
+        )
     )
 
     Column(
@@ -527,10 +636,9 @@ fun StoresList() {
     ) {
         stores.forEach { store ->
             Card(
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = White)
+                colors = CardDefaults.cardColors(containerColor = colors.surface)
             ) {
                 Row(
                     modifier = Modifier
@@ -539,23 +647,36 @@ fun StoresList() {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    // Columna de textos (nombre + dirección)
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text(
-                            text = store,
+                            text = store.name,
                             style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.onSurface
                         )
                         Text(
-                            text = "Afiliada a TCG Table Organizer",
+                            text = store.location,
                             style = MaterialTheme.typography.bodySmall,
-                            color = SecondaryGray
+                            color = colors.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    // Botón "Ver"
                     Text(
                         text = "Ver",
                         style = MaterialTheme.typography.labelMedium,
                         color = Burgundy,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable {
+                            onOpenStore(store.name, store.location, store.mapUrl)
+                        }
                     )
                 }
             }
@@ -567,11 +688,10 @@ fun StoresList() {
                          EVENTOS
    ========================================================== */
 
-/**
- * Tab de eventos con lista estilo tarjeta.
- */
 @Composable
 fun EventsTab() {
+
+    val colors = MaterialTheme.colorScheme
 
     val events = listOf(
         EventUi("ENE", "10", "10:00 a.m.", "Commander Casual", "10:00 a.m."),
@@ -588,12 +708,13 @@ fun EventsTab() {
         Text(
             text = "EVENTOS",
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = colors.onBackground
         )
         Text(
             text = "2026",
             style = MaterialTheme.typography.bodyMedium,
-            color = SecondaryGray
+            color = colors.onSurfaceVariant
         )
 
         Spacer(Modifier.height(16.dp))
@@ -607,7 +728,8 @@ fun EventsTab() {
                     .weight(1f)
                     .height(48.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Burgundy),
+                    .
+                    background(Burgundy),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -621,12 +743,12 @@ fun EventsTab() {
                     .weight(1f)
                     .height(48.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(SurfaceGray),
+                    .background(colors.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "Tiendas",
-                    color = SecondaryGray,
+                    color = colors.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -644,16 +766,15 @@ fun EventsTab() {
     }
 }
 
-/**
- * Tarjeta individual para un evento.
- */
 @Composable
 fun EventCard(event: EventUi) {
+
+    val colors = MaterialTheme.colorScheme
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = White)
+        colors = CardDefaults.cardColors(containerColor = colors.surface)
     ) {
 
         Row(
@@ -661,32 +782,31 @@ fun EventCard(event: EventUi) {
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(event.dayShort, color = SecondaryGray)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(event.dayShort, color = colors.onSurfaceVariant)
                 Text(
                     event.dayNumber,
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onSurface
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(event.time, color = SecondaryGray)
+                Text(event.time, color = colors.onSurfaceVariant)
             }
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = event.title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onSurface
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = event.storeLabelTime,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Medium,
+                    color = colors.onSurface
                 )
             }
         }
@@ -694,31 +814,30 @@ fun EventCard(event: EventUi) {
 }
 
 /* ==========================================================
-                     CHAT & PERFIL (PLACEHOLDERS)
+                     CHAT & PERFIL
    ========================================================== */
 
-/**
- * Tab de chat (placeholder).
- */
 @Composable
 fun ChatTab() {
+    val colors = MaterialTheme.colorScheme
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Text("Chat en desarrollo", color = SecondaryGray)
+        Text("Chat en desarrollo", color = colors.onSurfaceVariant)
     }
 }
 
-/**
- * Tab de perfil (placeholder).
- */
 @Composable
 fun ProfileTab() {
+    val colors = MaterialTheme.colorScheme
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Text("Perfil en desarrollo", color = SecondaryGray)
+        Text("Perfil en desarrollo", color = colors.onSurfaceVariant)
     }
 }
+

@@ -7,27 +7,44 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+// ------------------------ PALETA CLARA ------------------------
 private val LightColors = lightColorScheme(
     primary = Burgundy,
     onPrimary = White,
-    background = White,
-    onBackground = Color(0xFF111111),
-    surface = White,
-    onSurface = Color(0xFF111111)
+
+    background = BackgroundLight,
+    onBackground = TextPrimaryLight,   // **negro sobre fondo**
+
+    surface = SurfaceLight,
+    onSurface = TextPrimaryLight,      // **negro en tarjetas**
+
+    surfaceVariant = SurfaceLightAlt,
+    onSurfaceVariant = TextSecondaryLight,
+
+    secondary = BurgundySoft,
+    onSecondary = White
 )
 
+// ------------------------ PALETA OSCURA ------------------------
 private val DarkColors = darkColorScheme(
     primary = Burgundy,
     onPrimary = White,
-    background = Color(0xFF000000),
-    onBackground = White,
-    surface = Color(0xFF222222),
-    onSurface = White
+
+    background = BackgroundDark,
+    onBackground = TextPrimaryDark,
+
+    surface = SurfaceDark,
+    onSurface = TextPrimaryDark,
+
+    surfaceVariant = SurfaceDarkAlt,
+    onSurfaceVariant = TextSecondaryDark,
+
+    secondary = BurgundySoft,
+    onSecondary = White
 )
 
 @Composable
